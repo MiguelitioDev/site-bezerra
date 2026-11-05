@@ -1,0 +1,347 @@
+@import "tailwindcss";
+
+:root {
+  --ink: #03060e;
+  --accent: #7dd3fc;
+  --accent-deep: #03111c;
+  --ease-out-quint: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-cubic: cubic-bezier(0.32, 0, 0.67, 0);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--ink);
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* ───────── Palco 16:9 que preenche a tela (inclusive em F11) ───────── */
+
+.viewport {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--ink);
+}
+
+.stage {
+  position: relative;
+  width: min(100vw, calc(100dvh * 16 / 9));
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  container-type: size;
+  animation: stage-in 900ms var(--ease-out-quint) both;
+}
+
+@keyframes stage-in {
+  from {
+    opacity: 0;
+    transform: scale(1.012);
+  }
+}
+
+/* ───────── Troca de slides: direção segue a navegação ───────── */
+
+.slide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transform: translate3d(var(--shift, 0), 0, 0);
+  /* saída: mais rápida que a entrada */
+  transition:
+    transform 300ms var(--ease-in-cubic),
+    opacity 240ms linear;
+  pointer-events: none;
+}
+
+.slide[data-pos="before"] {
+  --shift: -3.5%;
+}
+.slide[data-pos="after"] {
+  --shift: 3.5%;
+}
+.slide[data-pos="current"] {
+  opacity: 1;
+  pointer-events: auto;
+  transition:
+    transform 560ms var(--ease-out-quint) 40ms,
+    opacity 380ms linear 40ms;
+}
+
+.slide img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  -webkit-user-drag: none;
+}
+
+/* ───────── Controles: aparecem ao mexer, somem em repouso ───────── */
+
+.chrome {
+  transition: opacity 300ms ease;
+}
+.viewport[data-idle="true"] .chrome {
+  opacity: 0;
+}
+.viewport[data-idle="true"] {
+  cursor: none;
+}
+
+.nav-btn {
+  position: fixed;
+  top: 50%;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  margin-top: -26px;
+  border-radius: 999px;
+  border: 1px solid rgba(125, 211, 252, 0.3);
+  background: rgba(3, 10, 20, 0.6);
+  color: var(--accent);
+  cursor: pointer;
+  transition:
+    opacity 300ms ease,
+    background-color 160ms ease,
+    border-color 160ms ease,
+    transform 120ms ease-out;
+}
+.nav-btn:hover {
+  background: rgba(125, 211, 252, 0.16);
+  border-color: rgba(125, 211, 252, 0.7);
+}
+.nav-btn:active {
+  transform: scale(0.94);
+}
+.nav-btn[data-side="prev"] {
+  left: 14px;
+}
+.nav-btn[data-side="next"] {
+  right: 14px;
+}
+.nav-btn:disabled {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.progress {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: 4px;
+  z-index: 10;
+  display: flex;
+  gap: 5px;
+}
+.progress button {
+  flex: 1;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  position: relative;
+}
+.progress button::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 6px;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.16);
+  transition:
+    background-color 300ms ease,
+    height 140ms ease-out;
+}
+.progress button[data-done="true"]::after {
+  background: rgba(125, 211, 252, 0.5);
+}
+.progress button[aria-current="true"]::after {
+  background: var(--accent);
+}
+.progress button:hover::after {
+  height: 6px;
+}
+
+/* ───────── Slide do vídeo ───────── */
+
+.video-box {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background:
+    radial-gradient(60% 70% at 50% 55%, rgba(22, 78, 118, 0.38), transparent 70%),
+    var(--ink);
+}
+
+/* grade de projeto, a mesma linguagem dos slides */
+.video-box::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(125, 211, 252, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(125, 211, 252, 0.055) 1px, transparent 1px);
+  background-size: 5cqw 5cqw;
+  background-position: center;
+  mask-image: radial-gradient(60% 65% at 50% 50%, #000, transparent 100%);
+  -webkit-mask-image: radial-gradient(60% 65% at 50% 50%, #000, transparent 100%);
+}
+
+/* cantoneiras de visor, na margem de 64px dos slides */
+.corner {
+  position: absolute;
+  width: 3.2cqw;
+  height: 3.2cqw;
+  border-color: rgba(125, 211, 252, 0.4);
+  border-style: solid;
+  border-width: 0;
+}
+.corner[data-c="tl"] { top: 5cqw; left: 5cqw; border-top-width: 2px; border-left-width: 2px; }
+.corner[data-c="tr"] { top: 5cqw; right: 5cqw; border-top-width: 2px; border-right-width: 2px; }
+.corner[data-c="bl"] { bottom: 5cqw; left: 5cqw; border-bottom-width: 2px; border-left-width: 2px; }
+.corner[data-c="br"] { bottom: 5cqw; right: 5cqw; border-bottom-width: 2px; border-right-width: 2px; }
+
+.video-box video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+  opacity: 0;
+}
+
+/* modo imersivo: vídeo em tela cheia, sem nenhum controle */
+.video-box:fullscreen,
+.video-box[data-immersive="true"] {
+  background: #000;
+  cursor: default;
+}
+.video-box:fullscreen[data-cursor="hidden"] {
+  cursor: none;
+}
+.video-box:fullscreen video {
+  opacity: 1;
+}
+.video-box:fullscreen::before,
+.video-box:fullscreen .corner {
+  display: none;
+}
+
+.play-wrap {
+  position: relative;
+  display: grid;
+  place-items: center;
+  z-index: 1;
+}
+
+.play-btn {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 9cqw;
+  height: 9cqw;
+  min-width: 64px;
+  min-height: 64px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-deep);
+  cursor: pointer;
+  transition:
+    transform 180ms var(--ease-out-quint),
+    opacity 220ms ease,
+    box-shadow 220ms ease;
+  box-shadow: 0 0 0 0 rgba(125, 211, 252, 0);
+}
+.play-btn svg {
+  width: 38%;
+  height: 38%;
+  margin-left: 6%;
+}
+.play-btn:hover:not(:disabled) {
+  transform: scale(1.06);
+  box-shadow: 0 0 6cqw 0 rgba(125, 211, 252, 0.35);
+}
+.play-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.play-btn:disabled {
+  cursor: default;
+  opacity: 0.35;
+}
+.play-btn[data-launching="true"] {
+  transform: scale(1.5);
+  opacity: 0;
+  transition:
+    transform 260ms var(--ease-in-cubic),
+    opacity 200ms linear;
+}
+
+/* único movimento contínuo da página: um anel que chama o clique */
+.play-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  border: 2px solid var(--accent);
+  opacity: 0;
+  pointer-events: none;
+  animation: ring 3.2s var(--ease-out-quint) infinite;
+}
+.play-wrap[data-ready="false"] .play-ring {
+  display: none;
+}
+@keyframes ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  70%,
+  100% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage {
+    animation: none;
+  }
+  .slide,
+  .slide[data-pos="current"] {
+    transform: none;
+    transition: opacity 160ms linear;
+  }
+  .play-ring {
+    animation: none;
+    display: none;
+  }
+  .play-btn,
+  .play-btn[data-launching="true"] {
+    transition: opacity 160ms linear;
+  }
+  .play-btn:hover:not(:disabled) {
+    transform: none;
+  }
+}

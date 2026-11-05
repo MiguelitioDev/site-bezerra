@@ -3,3 +3,4 @@ dist
 .vercel
 *.pptx
 *.log
+.env*

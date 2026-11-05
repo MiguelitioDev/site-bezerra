@@ -4,7 +4,7 @@ import { VIDEO_SRC } from "../config";
 type Props = {
   /** true quando este é o slide visível. */
   active: boolean;
-  /** avisa o deck se o vídeo está em tela cheia (para travar a navegação). */
+  /** avisa o deck quando o vídeo está em modo imersivo (trava a navegação). */
   onImmersiveChange: (immersive: boolean) => void;
 };
 
@@ -13,40 +13,52 @@ type IOSVideo = HTMLVideoElement & { webkitEnterFullscreen?: () => void };
 export function VideoSlide({ active, onImmersiveChange }: Props) {
   const box = useRef<HTMLDivElement>(null);
   const video = useRef<HTMLVideoElement>(null);
+  const realFullscreen = useRef(false);
   const [ready, setReady] = useState(false); // arquivo de vídeo encontrado
-  const [launching, setLaunching] = useState(false);
+  const [playing, setPlaying] = useState(false); // modo imersivo (vídeo visível)
+
+  useEffect(() => {
+    onImmersiveChange(playing);
+  }, [playing, onImmersiveChange]);
 
   const stop = useCallback(() => {
-    const v = video.current;
-    if (!v) return;
-    v.pause();
-    setLaunching(false);
-    onImmersiveChange(false);
-  }, [onImmersiveChange]);
+    video.current?.pause();
+    if (document.fullscreenElement === box.current) void document.exitFullscreen();
+    realFullscreen.current = false;
+    setPlaying(false);
+  }, []);
 
-  // entra e sai da tela cheia (inclusive via Esc)
+  // Esc (ou qualquer saída) da tela cheia real encerra o modo imersivo
   useEffect(() => {
     const onFs = () => {
-      const on = document.fullscreenElement === box.current;
-      onImmersiveChange(on);
-      if (!on) {
+      if (document.fullscreenElement === box.current) {
+        realFullscreen.current = true;
+      } else if (realFullscreen.current) {
+        realFullscreen.current = false;
         video.current?.pause();
-        setLaunching(false);
+        setPlaying(false);
       }
     };
     document.addEventListener("fullscreenchange", onFs);
     return () => document.removeEventListener("fullscreenchange", onFs);
-  }, [onImmersiveChange]);
+  }, []);
+
+  // Esc também funciona quando o navegador não deu tela cheia real
+  useEffect(() => {
+    if (!playing) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") stop();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [playing, stop]);
 
   // saiu do slide: pausa
   useEffect(() => {
-    if (!active) {
-      if (document.fullscreenElement === box.current) void document.exitFullscreen();
-      stop();
-    }
+    if (!active) stop();
   }, [active, stop]);
 
-  // esconde o cursor quando o mouse para, só em tela cheia
+  // esconde o cursor quando o mouse para, só durante o vídeo
   useEffect(() => {
     const el = box.current;
     if (!el) return;
@@ -67,23 +79,29 @@ export function VideoSlide({ active, onImmersiveChange }: Props) {
     const v = video.current as IOSVideo | null;
     const b = box.current;
     if (!v || !b || !ready) return;
-    setLaunching(true);
+
+    // 1) mostra o vídeo já, para nunca tocar com a tela vazia
+    setPlaying(true);
+
+    // 2) tenta a tela cheia real; se negada, o vídeo segue preenchendo o palco
     try {
       if (b.requestFullscreen) await b.requestFullscreen({ navigationUI: "hide" });
       else v.webkitEnterFullscreen?.(); // iPhone
-    } catch {
-      /* segue em tela normal se o navegador negar */
+    } catch (err) {
+      console.warn("Tela cheia indisponível, usando o palco do site:", err);
     }
+
     try {
       await v.play();
-    } catch {
+    } catch (err) {
+      console.warn("Não foi possível reproduzir o vídeo:", err);
       stop();
     }
   };
 
   const toggle = () => {
     const v = video.current;
-    if (!v || document.fullscreenElement !== box.current) return;
+    if (!v || !playing) return;
     if (v.paused) void v.play();
     else v.pause();
   };
@@ -91,12 +109,11 @@ export function VideoSlide({ active, onImmersiveChange }: Props) {
   const onEnded = () => {
     const v = video.current;
     if (v) v.currentTime = 0;
-    if (document.fullscreenElement === box.current) void document.exitFullscreen();
     stop();
   };
 
   return (
-    <div ref={box} className="video-box" onClick={toggle}>
+    <div ref={box} className="video-box" data-playing={playing} onClick={toggle}>
       <span className="corner" data-c="tl" />
       <span className="corner" data-c="tr" />
       <span className="corner" data-c="bl" />
@@ -114,15 +131,14 @@ export function VideoSlide({ active, onImmersiveChange }: Props) {
         onEnded={onEnded}
       />
 
-      <div className="play-wrap" data-ready={ready}>
+      <div className="play-wrap" data-ready={ready} data-playing={playing}>
         <span className="play-ring" />
         <button
           type="button"
           className="play-btn"
-          data-launching={launching}
-          disabled={!ready}
+          disabled={!ready || playing}
           aria-label="Reproduzir vídeo em tela cheia"
-          tabIndex={active ? 0 : -1}
+          tabIndex={active && !playing ? 0 : -1}
           onClick={(e) => {
             e.stopPropagation();
             void start();

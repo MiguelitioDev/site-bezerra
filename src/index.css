@@ -101,6 +101,11 @@ body {
 .viewport[data-idle="true"] {
   cursor: none;
 }
+/* durante o vídeo, nenhum controle do site aparece */
+.viewport[data-immersive="true"] .chrome {
+  opacity: 0;
+  pointer-events: none;
+}
 
 .nav-btn {
   position: fixed;
@@ -232,21 +237,20 @@ body {
   opacity: 0;
 }
 
-/* modo imersivo: vídeo em tela cheia, sem nenhum controle */
-.video-box:fullscreen,
-.video-box[data-immersive="true"] {
+/* modo imersivo: vídeo visível e sem nenhum controle.
+   Vale na tela cheia real e também se o navegador negar a tela cheia. */
+.video-box[data-playing="true"] {
   background: #000;
-  cursor: default;
 }
-.video-box:fullscreen[data-cursor="hidden"] {
-  cursor: none;
-}
-.video-box:fullscreen video {
+.video-box[data-playing="true"] video {
   opacity: 1;
 }
-.video-box:fullscreen::before,
-.video-box:fullscreen .corner {
+.video-box[data-playing="true"]::before,
+.video-box[data-playing="true"] .corner {
   display: none;
+}
+.video-box[data-playing="true"][data-cursor="hidden"] {
+  cursor: none;
 }
 
 .play-wrap {
@@ -291,7 +295,7 @@ body {
   cursor: default;
   opacity: 0.35;
 }
-.play-btn[data-launching="true"] {
+.play-wrap[data-playing="true"] .play-btn {
   transform: scale(1.5);
   opacity: 0;
   transition:
@@ -338,7 +342,7 @@ body {
     display: none;
   }
   .play-btn,
-  .play-btn[data-launching="true"] {
+  .play-wrap[data-playing="true"] .play-btn {
     transition: opacity 160ms linear;
   }
   .play-btn:hover:not(:disabled) {

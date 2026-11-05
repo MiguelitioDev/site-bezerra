@@ -109,7 +109,8 @@ export default function App() {
   return (
     <div
       className="viewport"
-      data-idle={idle && !immersive}
+      data-idle={idle}
+      data-immersive={immersive}
       onTouchStart={(e) => (touchX.current = e.touches[0].clientX)}
       onTouchEnd={(e) => {
         if (touchX.current === null || immersive) return;
